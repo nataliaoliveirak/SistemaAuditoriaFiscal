@@ -2,42 +2,43 @@ import java.sql.*;
 
 public class Main {
     public static void main(String[] args) {
-        // O banco será um arquivo chamado 'banco_fiscal' dentro da pasta do projeto
-        String url = "jdbc:h2:./banco_fiscal";
+        // Usaremos o nome 'banco_fiscal_v3' para garantir que ele crie tudo do zero e limpo
+        String url = "jdbc:h2:./banco_fiscal_v3";
         String usuario = "sa";
         String senha = "";
 
         try (Connection conn = DriverManager.getConnection(url, usuario, senha)) {
-            System.out.println("✅ Conexão com o Banco de Dados H2 realizada com sucesso!");
-
             Statement stmt = conn.createStatement();
 
-            // Criando a tabela (Lógica SQL)
-            String sqlCreate = "CREATE TABLE IF NOT EXISTS auditoria_notas (" +
+            // 1. Criando a tabela com a estrutura completa
+            stmt.execute("CREATE TABLE IF NOT EXISTS auditoria_fiscal (" +
                     "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                    "razao_social VARCHAR(100), " +
-                    "cnpj VARCHAR(20), " +
-                    "valor_imposto DOUBLE)";
-            stmt.execute(sqlCreate);
-            System.out.println("📊 Tabela 'auditoria_notas' verificada/criada.");
+                    "empresa VARCHAR(100), " +
+                    "valor_mercadoria DOUBLE, " +
+                    "valor_difal DOUBLE, " +
+                    "valor_st DOUBLE)");
 
-            // Inserindo um dado de exemplo para testar
-            String sqlInsert = "INSERT INTO auditoria_notas (razao_social, cnpj, valor_imposto) " +
-                    "VALUES ('Natália Tech Contabilidade', '00.000.000/0001-00', 1550.50)";
+            // 2. Criando o objeto da Calculadora
+            CalculadoraFiscal calc = new CalculadoraFiscal();
+
+            // 3. Fazendo os cálculos de ICMS Interestadual (Lógica Contábil)
+            double valorNota = 1000.0;
+            double meuDifal = calc.calcularDifal(valorNota, 18.0, 12.0);
+            double meuST = calc.calcularST(valorNota, 40.0, 18.0);
+
+            // 4. Inserindo no banco (Apenas UM Insert com todos os dados)
+            String sqlInsert = "INSERT INTO auditoria_fiscal (empresa, valor_mercadoria, valor_difal, valor_st) " +
+                    "VALUES ('Fornecedor MG', " + valorNota + ", " + meuDifal + ", " + meuST + ")";
+
             stmt.execute(sqlInsert);
-            System.out.println("📥 Dados inseridos para teste de auditoria.");
 
-            // Consultando os dados (O famoso SELECT)
-            ResultSet rs = stmt.executeQuery("SELECT * FROM auditoria_notas");
-            System.out.println("\n--- RELATÓRIO DE NOTAS AUDITADAS ---");
-            while (rs.next()) {
-                System.out.println("ID: " + rs.getInt("id") +
-                        " | Empresa: " + rs.getString("razao_social") +
-                        " | Imposto: R$ " + rs.getDouble("valor_imposto"));
-            }
+            System.out.println("✅ Auditoria realizada com sucesso!");
+            System.out.println("📊 Valor Mercadoria: R$ " + valorNota);
+            System.out.println("📊 DIFAL calculado: R$ " + meuDifal);
+            System.out.println("📊 ST calculado: R$ " + meuST);
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro de Banco de Dados: " + e.getMessage());
+            System.out.println("❌ Erro no Banco de Dados: " + e.getMessage());
         }
     }
 }
